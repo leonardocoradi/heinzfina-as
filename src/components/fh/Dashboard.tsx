@@ -445,7 +445,7 @@ export function Dashboard() {
       <section className="mt-5 grid grid-cols-2 gap-3">
         <Bubble
           className="col-span-2"
-          label="Saldo pendente (empresa + pessoal)"
+          label="Saldo (empresa + pessoal)"
           value={formatCents(totals.balance)}
           tone={totals.balance >= 0 ? "positive" : "negative"}
           icon={<Wallet className="size-4" />}
