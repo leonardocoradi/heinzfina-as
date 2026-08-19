@@ -326,18 +326,16 @@ export function useStore() {
 export function globalTotals(entries: Entry[], month: string) {
   let income = 0;
   let outcome = 0;
-  let pending = 0;
   for (const e of entries) {
     if (e.fromReserve) continue;
     if (monthKey(e.date) !== month) continue;
     if (e.type === "income") income += e.paid;
     else {
       outcome += e.amount;
-      pending += Math.max(0, e.amount - e.paid);
       if (!e.paidUpfront) income += e.paid;
     }
   }
-  return { income, outcome, balance: -pending };
+  return { income, outcome, balance: income - outcome };
 }
 
 export function scopeTotals(entries: Entry[], scope: Scope, month: string) {
