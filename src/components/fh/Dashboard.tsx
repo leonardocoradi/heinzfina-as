@@ -445,7 +445,7 @@ export function Dashboard() {
       <section className="mt-5 grid grid-cols-2 gap-3">
         <Bubble
           className="col-span-2"
-          label="Saldo disponível (empresa + pessoal)"
+          label="Saldo (empresa + pessoal)"
           value={formatCents(totals.balance)}
           tone={totals.balance >= 0 ? "positive" : "negative"}
           icon={<Wallet className="size-4" />}
@@ -455,17 +455,10 @@ export function Dashboard() {
               Entradas <b className="text-primary tabular-nums">{formatCents(totals.income)}</b>
             </span>
             <span>
-              Pagamentos <b className="text-destructive tabular-nums">{formatCents(totals.outcome)}</b>
+              Saídas <b className="text-destructive tabular-nums">{formatCents(totals.outcome)}</b>
             </span>
           </div>
         </Bubble>
-        <Bubble
-          className="col-span-2"
-          label="A pagar no mês"
-          value={formatCents(totals.pending)}
-          tone={totals.pending > 0 ? "negative" : "positive"}
-          icon={<CalendarClock className="size-4" />}
-        />
       </section>
 
       <CollapsibleSection
