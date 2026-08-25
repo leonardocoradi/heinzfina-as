@@ -1,8 +1,16 @@
 import { useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { formatCents, MONTHS, monthKey } from "@/lib/money";
+import { ArrowDownRight, ArrowUpRight, ChevronRight } from "lucide-react";
+import { formatCents, formatDate, MONTHS, monthKey } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { SelectedIconSmall } from "./IconPicker";
 import type { Category, Entry, Scope } from "@/lib/types";
 
@@ -14,6 +22,12 @@ interface Slice {
   color: string;
   icon: string | null | undefined;
   value: number;
+}
+
+interface RevenueMovement {
+  entry: Entry;
+  value: number;
+  origin: "Renda" | "Pagamento" | "Pagamento à vista";
 }
 
 export function DonutChart({
@@ -29,15 +43,42 @@ export function DonutChart({
 }) {
   const [mode, setMode] = useState<Mode>("despesas");
   const [selected, setSelected] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const revenueMovements = useMemo<RevenueMovement[]>(() => {
+    const movements: RevenueMovement[] = [];
+    for (const entry of entries) {
+      if (monthKey(entry.date) !== month) continue;
+      if (scopeFilter.length && !scopeFilter.includes(entry.scope)) continue;
+
+      if (entry.type === "income") {
+        movements.push({ entry, value: entry.amount, origin: "Renda" });
+      } else if (entry.paid > 0) {
+        movements.push({
+          entry,
+          value: Math.min(entry.amount, entry.paid),
+          origin: entry.paidUpfront ? "Pagamento à vista" : "Pagamento",
+        });
+      }
+    }
+    return movements;
+  }, [entries, month, scopeFilter]);
 
   const data = useMemo<Slice[]>(() => {
     const wantExpense = mode === "despesas";
     const sums = new Map<string, number>();
-    for (const e of entries) {
-      if (e.type !== (wantExpense ? "expense" : "income")) continue;
-      if (monthKey(e.date) !== month) continue;
-      if (scopeFilter.length && !scopeFilter.includes(e.scope)) continue;
-      sums.set(e.categoryId, (sums.get(e.categoryId) ?? 0) + e.amount);
+    if (wantExpense) {
+      for (const e of entries) {
+        if (e.type !== "expense") continue;
+        if (monthKey(e.date) !== month) continue;
+        if (scopeFilter.length && !scopeFilter.includes(e.scope)) continue;
+        sums.set(e.categoryId, (sums.get(e.categoryId) ?? 0) + e.amount);
+      }
+    } else {
+      for (const movement of revenueMovements) {
+        const categoryId = movement.entry.categoryId;
+        sums.set(categoryId, (sums.get(categoryId) ?? 0) + movement.value);
+      }
     }
     return [...sums.entries()]
       .map(([id, value]) => {
@@ -51,11 +92,24 @@ export function DonutChart({
         };
       })
       .sort((a, b) => b.value - a.value);
-  }, [entries, categories, month, scopeFilter, mode]);
+  }, [entries, categories, month, scopeFilter, mode, revenueMovements]);
 
   const total = useMemo(() => data.reduce((acc, s) => acc + s.value, 0), [data]);
   const isExpense = mode === "despesas";
   const selectedSlice = selected ? (data.find((s) => s.categoryId === selected) ?? null) : null;
+  const selectedMovements = useMemo(
+    () =>
+      selected
+        ? revenueMovements
+            .filter((movement) => movement.entry.categoryId === selected)
+            .sort(
+              (a, b) =>
+                b.entry.date.localeCompare(a.entry.date) ||
+                b.entry.createdAt.localeCompare(a.entry.createdAt),
+            )
+        : [],
+    [revenueMovements, selected],
+  );
 
   const pct = (value: number) => {
     if (!total) return "0%";
@@ -71,6 +125,7 @@ export function DonutChart({
   const switchMode = (next: Mode) => {
     setMode(next);
     setSelected(null);
+    setDetailOpen(false);
   };
 
   const monthLabel = `${MONTHS[Number(month.slice(5, 7)) - 1] ?? ""} de ${month.slice(0, 4)}`;
@@ -166,32 +221,49 @@ export function DonutChart({
           </div>
 
           {selectedSlice && (
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-secondary/40 px-4 py-3">
-              <span
-                className="grid size-8 shrink-0 place-items-center rounded-xl"
-                style={{ backgroundColor: `${selectedSlice.color}22`, color: selectedSlice.color }}
-              >
-                <SelectedIconSmall name={selectedSlice.icon} />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {selectedSlice.name}
-              </span>
-              <span
-                className={cn(
-                  "font-display text-sm font-semibold tabular-nums",
-                  isExpense ? "text-destructive" : "text-primary",
-                )}
-              >
-                {formatCents(selectedSlice.value)}
-              </span>
-              <span
-                className={cn(
-                  "text-sm tabular-nums",
-                  isExpense ? "text-destructive" : "text-primary",
-                )}
-              >
-                {pct(selectedSlice.value)}
-              </span>
+            <div className="mt-4 rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span
+                  className="grid size-8 shrink-0 place-items-center rounded-xl"
+                  style={{
+                    backgroundColor: `${selectedSlice.color}22`,
+                    color: selectedSlice.color,
+                  }}
+                >
+                  <SelectedIconSmall name={selectedSlice.icon} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {selectedSlice.name}
+                </span>
+                <span
+                  className={cn(
+                    "font-display shrink-0 text-sm font-semibold tabular-nums",
+                    isExpense ? "text-destructive" : "text-primary",
+                  )}
+                >
+                  {formatCents(selectedSlice.value)}
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 text-sm tabular-nums",
+                    isExpense ? "text-destructive" : "text-primary",
+                  )}
+                >
+                  {pct(selectedSlice.value)}
+                </span>
+              </div>
+              {!isExpense && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="mt-3 w-full rounded-xl"
+                  onClick={() => setDetailOpen(true)}
+                >
+                  Detalhar
+                  <ChevronRight className="size-4" />
+                </Button>
+              )}
             </div>
           )}
 
@@ -230,6 +302,56 @@ export function DonutChart({
           </div>
         </>
       )}
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>{selectedSlice?.name ?? "Detalhamento de receitas"}</DialogTitle>
+            <DialogDescription>
+              Entradas registradas em {monthLabel.toLowerCase()}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between rounded-2xl bg-primary/10 px-4 py-3">
+            <span className="text-sm text-muted-foreground">Total da categoria</span>
+            <strong className="font-display text-lg text-primary tabular-nums">
+              {formatCents(selectedSlice?.value ?? 0)}
+            </strong>
+          </div>
+
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+            {selectedMovements.map(({ entry, value, origin }) => (
+              <div
+                key={`${entry.id}-${origin}`}
+                className="rounded-2xl border border-border bg-secondary/30 px-4 py-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {entry.description || selectedSlice?.name || "Lançamento"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatDate(entry.date)} · {entry.scope === "empresa" ? "Empresa" : "Pessoal"}
+                    </p>
+                  </div>
+                  <strong className="shrink-0 text-sm text-primary tabular-nums">
+                    {formatCents(value)}
+                  </strong>
+                </div>
+                <span className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                  {origin}
+                </span>
+              </div>
+            ))}
+
+            {selectedMovements.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Nenhuma entrada encontrada nesta categoria.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
