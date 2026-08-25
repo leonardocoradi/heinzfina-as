@@ -24,10 +24,10 @@ interface Slice {
   value: number;
 }
 
-interface RevenueMovement {
+interface DetailMovement {
   entry: Entry;
   value: number;
-  origin: "Renda" | "Pagamento" | "Pagamento à vista";
+  origin: string;
 }
 
 export function DonutChart({
@@ -45,8 +45,8 @@ export function DonutChart({
   const [selected, setSelected] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const revenueMovements = useMemo<RevenueMovement[]>(() => {
-    const movements: RevenueMovement[] = [];
+  const revenueMovements = useMemo<DetailMovement[]>(() => {
+    const movements: DetailMovement[] = [];
     for (const entry of entries) {
       if (monthKey(entry.date) !== month) continue;
       if (scopeFilter.length && !scopeFilter.includes(entry.scope)) continue;
@@ -60,6 +60,29 @@ export function DonutChart({
           origin: entry.paidUpfront ? "Pagamento à vista" : "Pagamento",
         });
       }
+    }
+    return movements;
+  }, [entries, month, scopeFilter]);
+
+  const expenseMovements = useMemo<DetailMovement[]>(() => {
+    const movements: DetailMovement[] = [];
+    for (const entry of entries) {
+      if (entry.type !== "expense") continue;
+      if (monthKey(entry.date) !== month) continue;
+      if (scopeFilter.length && !scopeFilter.includes(entry.scope)) continue;
+
+      const origin = entry.paidUpfront
+        ? "Pago à vista"
+        : entry.fixed
+          ? "Despesa fixa"
+          : entry.installmentCount
+            ? `Parcela ${entry.installmentIndex}/${entry.installmentCount}`
+            : entry.paid >= entry.amount
+              ? "Pago"
+              : entry.paid > 0
+                ? "Pagamento parcial"
+                : "Em aberto";
+      movements.push({ entry, value: entry.amount, origin });
     }
     return movements;
   }, [entries, month, scopeFilter]);
@@ -100,7 +123,7 @@ export function DonutChart({
   const selectedMovements = useMemo(
     () =>
       selected
-        ? revenueMovements
+        ? (isExpense ? expenseMovements : revenueMovements)
             .filter((movement) => movement.entry.categoryId === selected)
             .sort(
               (a, b) =>
@@ -108,7 +131,7 @@ export function DonutChart({
                 b.entry.createdAt.localeCompare(a.entry.createdAt),
             )
         : [],
-    [revenueMovements, selected],
+    [expenseMovements, isExpense, revenueMovements, selected],
   );
 
   const pct = (value: number) => {
@@ -252,18 +275,16 @@ export function DonutChart({
                   {pct(selectedSlice.value)}
                 </span>
               </div>
-              {!isExpense && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="mt-3 w-full rounded-xl"
-                  onClick={() => setDetailOpen(true)}
-                >
-                  Detalhar
-                  <ChevronRight className="size-4" />
-                </Button>
-              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mt-3 w-full rounded-xl"
+                onClick={() => setDetailOpen(true)}
+              >
+                Detalhar
+                <ChevronRight className="size-4" />
+              </Button>
             </div>
           )}
 
@@ -306,15 +327,28 @@ export function DonutChart({
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-lg rounded-3xl">
           <DialogHeader>
-            <DialogTitle>{selectedSlice?.name ?? "Detalhamento de receitas"}</DialogTitle>
+            <DialogTitle>
+              {selectedSlice?.name ??
+                (isExpense ? "Detalhamento de despesas" : "Detalhamento de receitas")}
+            </DialogTitle>
             <DialogDescription>
-              Entradas registradas em {monthLabel.toLowerCase()}.
+              {isExpense ? "Despesas" : "Entradas"} registradas em {monthLabel.toLowerCase()}.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center justify-between rounded-2xl bg-primary/10 px-4 py-3">
+          <div
+            className={cn(
+              "flex items-center justify-between rounded-2xl px-4 py-3",
+              isExpense ? "bg-destructive/10" : "bg-primary/10",
+            )}
+          >
             <span className="text-sm text-muted-foreground">Total da categoria</span>
-            <strong className="font-display text-lg text-primary tabular-nums">
+            <strong
+              className={cn(
+                "font-display text-lg tabular-nums",
+                isExpense ? "text-destructive" : "text-primary",
+              )}
+            >
               {formatCents(selectedSlice?.value ?? 0)}
             </strong>
           </div>
@@ -334,11 +368,21 @@ export function DonutChart({
                       {formatDate(entry.date)} · {entry.scope === "empresa" ? "Empresa" : "Pessoal"}
                     </p>
                   </div>
-                  <strong className="shrink-0 text-sm text-primary tabular-nums">
+                  <strong
+                    className={cn(
+                      "shrink-0 text-sm tabular-nums",
+                      isExpense ? "text-destructive" : "text-primary",
+                    )}
+                  >
                     {formatCents(value)}
                   </strong>
                 </div>
-                <span className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                <span
+                  className={cn(
+                    "mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium",
+                    isExpense ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+                  )}
+                >
                   {origin}
                 </span>
               </div>
@@ -346,7 +390,7 @@ export function DonutChart({
 
             {selectedMovements.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Nenhuma entrada encontrada nesta categoria.
+                Nenhuma {isExpense ? "despesa" : "entrada"} encontrada nesta categoria.
               </p>
             )}
           </div>
