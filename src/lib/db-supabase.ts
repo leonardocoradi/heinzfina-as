@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import { indexedDbRepository, type Repository } from "./db";
-import type { Category, Entry, Meta } from "./types";
+import type { Category, Entry, Meta, PaymentPayer } from "./types";
 
 /**
  * Implementação do Repository usando Supabase.
@@ -41,6 +41,8 @@ interface EntryRow {
   from_reserve: boolean;
   paid_upfront: boolean;
   paid_at: string | null;
+  payment_payer: string | null;
+  client_name: string | null;
   created_at: string;
 }
 
@@ -73,6 +75,10 @@ const toEntry = (r: EntryRow): Entry => ({
   fromReserve: r.from_reserve,
   paidUpfront: r.paid_upfront ?? false,
   paidAt: r.paid_at ?? null,
+  paymentPayer: r.payment_payer === "client" || r.payment_payer === "self"
+    ? (r.payment_payer as PaymentPayer)
+    : null,
+  clientName: r.client_name?.trim() || null,
   createdAt: r.created_at,
 });
 
@@ -93,6 +99,8 @@ const toEntryRow = (e: Entry): EntryRow => ({
   from_reserve: e.fromReserve,
   paid_upfront: e.paidUpfront,
   paid_at: e.paidAt,
+  payment_payer: e.paymentPayer,
+  client_name: e.clientName,
   created_at: e.createdAt,
 });
 

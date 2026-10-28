@@ -1,5 +1,6 @@
 export type Scope = "empresa" | "pessoal";
 export type EntryType = "income" | "expense";
+export type PaymentPayer = "self" | "client";
 
 export interface Category {
   id: string;
@@ -31,6 +32,10 @@ export interface Entry {
   paidUpfront: boolean;
   /** ISO yyyy-mm-dd da última confirmação de pagamento */
   paidAt: string | null;
+  /** Quem confirmou o pagamento da despesa */
+  paymentPayer: PaymentPayer | null;
+  /** Preenchido quando o pagamento foi feito diretamente por um cliente */
+  clientName: string | null;
   createdAt: string;
 }
 

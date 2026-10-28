@@ -25,11 +25,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatCents, formatDate, MONTHS, monthKey, todayISO } from "@/lib/money";
 import { globalTotals, scopeTotals, useStore } from "@/lib/store";
 import { annualReportPdf, monthlyReportPdf } from "@/lib/pdf";
-import type { Category, Entry, Scope } from "@/lib/types";
+import type { Category, Entry, PaymentPayer, Scope } from "@/lib/types";
 import {
   CategoriesDialog,
   DetailDialog,
@@ -250,6 +251,8 @@ export function Dashboard() {
   const [confirmPay, setConfirmPay] = useState<Entry[] | null>(null);
   const [payDone, setPayDone] = useState(false);
   const [payDoneTotal, setPayDoneTotal] = useState(0);
+  const [paymentPayer, setPaymentPayer] = useState<PaymentPayer>("self");
+  const [clientName, setClientName] = useState("");
 
   const totals = useMemo(() => globalTotals(entries, month), [entries, month]);
   const empresa = useMemo(() => scopeTotals(entries, "empresa", month), [entries, month]);
@@ -692,6 +695,8 @@ export function Dashboard() {
                           toast.info("Tudo já está pago");
                           return;
                         }
+                        setPaymentPayer("self");
+                        setClientName("");
                         setConfirmPay(g.pending);
                       }}
                     >
@@ -789,6 +794,8 @@ export function Dashboard() {
           if (!v) {
             setConfirmPay(null);
             setPayDone(false);
+            setPaymentPayer("self");
+            setClientName("");
           }
         }}
       >
@@ -804,18 +811,48 @@ export function Dashboard() {
                   {formatCents((confirmPay ?? []).reduce((a, e) => a + (e.amount - e.paid), 0))}.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Quem efetuou o pagamento?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={paymentPayer === "self" ? "default" : "outline"}
+                    className="rounded-2xl"
+                    onClick={() => setPaymentPayer("self")}
+                  >
+                    Pago por mim
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={paymentPayer === "client" ? "default" : "outline"}
+                    className="rounded-2xl"
+                    onClick={() => setPaymentPayer("client")}
+                  >
+                    Pago pelo cliente
+                  </Button>
+                </div>
+                {paymentPayer === "client" && (
+                  <Input
+                    value={clientName}
+                    onChange={(event) => setClientName(event.target.value)}
+                    placeholder="Nome do cliente"
+                    autoFocus
+                  />
+                )}
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel className="rounded-2xl">Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   className="rounded-2xl"
                   onClick={() => {
                     const list = confirmPay ?? [];
-                    store.payFull(list.map((e) => e.id));
+                    store.payFull(list.map((e) => e.id), paymentPayer, clientName);
                     setPayDoneTotal(list.length);
                     setConfirmPay(null);
                     setPayDone(true);
                     toast.success("Pagamento registrado");
                   }}
+                  disabled={paymentPayer === "client" && !clientName.trim()}
                 >
                   Confirmar
                 </AlertDialogAction>

@@ -23,6 +23,8 @@ create table if not exists public.entries (
   from_reserve        boolean not null default false,
   paid_upfront        boolean not null default false,
   paid_at             text,
+  payment_payer       text check (payment_payer in ('self', 'client')),
+  client_name         text,
   created_at          text not null default now()::text
 );
 

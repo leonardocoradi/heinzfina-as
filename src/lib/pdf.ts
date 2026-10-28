@@ -56,13 +56,14 @@ export function monthlyReportPdf(
       formatCents(e.amount),
       status,
       e.paidAt ? formatDate(e.paidAt) : "—",
+      e.paymentPayer === "client" && e.clientName ? `Cliente: ${e.clientName}` : "—",
       obs || "—",
     ];
   });
 
   autoTable(doc, {
     startY: 110,
-    head: [["Vencimento", "Descrição", "Categoria", "Valor", "Status", "Pago em", "Observações"]],
+    head: [["Vencimento", "Descrição", "Categoria", "Valor", "Status", "Pago em", "Pagador", "Observações"]],
     body,
     styles: { fontSize: 9, cellPadding: 6 },
     headStyles: { fillColor: [34, 88, 66], textColor: 255 },

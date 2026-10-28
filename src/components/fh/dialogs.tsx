@@ -773,6 +773,12 @@ export function DetailDialog({
   const statusOf = (e: Entry): "Pago" | "Parcial" | "Em aberto" =>
     e.paid >= e.amount ? "Pago" : e.paid > 0 ? "Parcial" : "Em aberto";
 
+  const paymentInfo = (e: Entry) => {
+    if (!e.paidAt) return `Vencimento ${formatDate(e.date)}`;
+    const client = e.paymentPayer === "client" && e.clientName ? ` • Cliente: ${e.clientName}` : "";
+    return `Pago em ${formatDate(e.paidAt)}${client}`;
+  };
+
   const compactGroups = new Map<string, Entry[]>();
   const standaloneEntries: Entry[] = [];
   for (const entry of entries) {
@@ -957,9 +963,7 @@ export function DetailDialog({
                               : `${entry.installmentIndex}/${entry.installmentCount}`}
                           </span>
                           <span className="min-w-0 flex-1 text-xs text-muted-foreground sm:text-sm">
-                            {entry.paidAt
-                              ? `Pago em ${formatDate(entry.paidAt)}`
-                              : `Vencimento ${formatDate(entry.date)}`}
+                            {paymentInfo(entry)}
                           </span>
                           <span className="hidden text-sm font-medium tabular-nums sm:block">
                             {formatCents(entry.amount)}
@@ -1003,9 +1007,7 @@ export function DetailDialog({
                   )}
                   <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span className="tabular-nums">
-                      {e.paidAt
-                        ? `Pago em ${formatDate(e.paidAt)}`
-                        : `Vencimento ${formatDate(e.date)}`}
+                      {paymentInfo(e)}
                     </span>
                     <span className="font-display text-sm font-semibold tabular-nums text-foreground">
                       {formatCents(e.amount)}
@@ -1016,7 +1018,7 @@ export function DetailDialog({
                 <span className="hidden text-sm tabular-nums sm:block">{formatDate(e.date)}</span>
                 <span className="hidden truncate text-sm sm:block">{labelOf(e)}</span>
                 <span className="hidden text-sm tabular-nums sm:block">
-                  {e.paidAt ? `Pago em ${formatDate(e.paidAt)}` : "—"}
+                  {e.paidAt ? paymentInfo(e) : "—"}
                 </span>
                 <span className="hidden text-right font-display text-sm font-semibold tabular-nums sm:block">
                   {formatCents(e.amount)}

@@ -11,7 +11,7 @@ import {
 import { CATEGORY_COLORS, DEFAULT_CATEGORIES } from "./db";
 import { supabaseRepository } from "./db-supabase";
 import { addMonths, monthKey, todayISO } from "./money";
-import { uid, type Category, type Entry, type Scope } from "./types";
+import { uid, type Category, type Entry, type PaymentPayer, type Scope } from "./types";
 
 export interface NewExpenseInput {
   scope: Scope;
@@ -44,7 +44,7 @@ interface StoreValue {
   deleteEntry: (id: string) => void;
   deleteGroup: (ids: string[]) => void;
   payPartial: (id: string, value: number) => void;
-  payFull: (ids: string[]) => void;
+  payFull: (ids: string[], payer: PaymentPayer, clientName?: string) => void;
   addCategory: (name: string, icon?: string) => void;
   updateCategory: (id: string, patch: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
@@ -108,6 +108,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fromReserve: false,
       paidUpfront: input.paidUpfront,
       paidAt: input.paidUpfront ? todayISO() : null,
+      paymentPayer: input.paidUpfront ? ("self" as const) : null,
+      clientName: null,
       createdAt: now,
     };
 
@@ -179,6 +181,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         fromReserve: false,
         paidUpfront: false,
         paidAt: input.date,
+        paymentPayer: null,
+        clientName: null,
         createdAt: new Date().toISOString(),
       },
     ]);
@@ -206,10 +210,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const payFull = useCallback((ids: string[]) => {
+  const payFull = useCallback((ids: string[], payer: PaymentPayer, clientName?: string) => {
     const set_ = new Set(ids);
     const paidAt = todayISO();
-    setEntries((prev) => prev.map((e) => (set_.has(e.id) ? { ...e, paid: e.amount, paidAt } : e)));
+    const normalizedClientName = payer === "client" ? clientName?.trim() || null : null;
+    setEntries((prev) =>
+      prev.map((e) =>
+        set_.has(e.id)
+          ? { ...e, paid: e.amount, paidAt, paymentPayer: payer, clientName: normalizedClientName }
+          : e,
+      ),
+    );
   }, []);
 
   const addCategory = useCallback((name: string, icon?: string) => {
@@ -264,6 +275,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         fromReserve: true,
         paidUpfront: false,
         paidAt: todayISO(),
+        paymentPayer: "self",
+        clientName: null,
         createdAt: new Date().toISOString(),
       },
     ]);
