@@ -27,20 +27,12 @@ export function monthlyReportPdf(
   month: string,
 ) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const catName = (id: string) =>
-    categories.find((c) => c.id === id)?.name ?? "Sem categoria";
+  const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? "Sem categoria";
   const [y, m] = month.split("-");
-  header(
-    doc,
-    `Relatório Mensal • ${scopeLabel(scope)}`,
-    `${MONTHS[Number(m) - 1]} de ${y}`,
-  );
+  header(doc, `Relatório Mensal • ${scopeLabel(scope)}`, `${MONTHS[Number(m) - 1]} de ${y}`);
 
   const rows = entries
-    .filter(
-      (e) =>
-        e.scope === scope && e.type === "expense" && monthKey(e.date) === month,
-    )
+    .filter((e) => e.scope === scope && e.type === "expense" && monthKey(e.date) === month)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   let total = 0;
@@ -48,8 +40,7 @@ export function monthlyReportPdf(
   const body = rows.map((e) => {
     total += e.amount;
     paid += e.paid;
-    const status =
-      e.paid >= e.amount ? "Pago" : e.paid > 0 ? "Parcial" : "A pagar";
+    const status = e.paid >= e.amount ? "Pago" : e.paid > 0 ? "Parcial" : "A pagar";
     const obs = [
       e.installmentCount ? `Parcela ${e.installmentIndex}/${e.installmentCount}` : "",
       e.fixed ? "Despesa fixa" : "",
@@ -64,21 +55,21 @@ export function monthlyReportPdf(
       catName(e.categoryId),
       formatCents(e.amount),
       status,
+      e.paidAt ? formatDate(e.paidAt) : "—",
       obs || "—",
     ];
   });
 
   autoTable(doc, {
     startY: 110,
-    head: [["Data", "Descrição", "Categoria", "Valor", "Status", "Observações"]],
+    head: [["Vencimento", "Descrição", "Categoria", "Valor", "Status", "Pago em", "Observações"]],
     body,
     styles: { fontSize: 9, cellPadding: 6 },
     headStyles: { fillColor: [34, 88, 66], textColor: 255 },
     alternateRowStyles: { fillColor: [244, 248, 246] },
   });
 
-  const endY = (doc as unknown as { lastAutoTable: { finalY: number } })
-    .lastAutoTable.finalY;
+  const endY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   autoTable(doc, {
     startY: endY + 18,
     body: [
@@ -101,8 +92,7 @@ export function annualReportPdf(
   year: string,
 ) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const catName = (id: string) =>
-    categories.find((c) => c.id === id)?.name ?? "Sem categoria";
+  const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? "Sem categoria";
   header(doc, `Relatório Anual • ${scopeLabel(scope)}`, `Ano de ${year}`);
 
   let cursor = 110;
@@ -111,12 +101,10 @@ export function annualReportPdf(
   for (let m = 0; m < 12; m++) {
     const key = `${year}-${String(m + 1).padStart(2, "0")}`;
     const rows = entries.filter(
-      (e) =>
-        e.scope === scope && e.type === "expense" && monthKey(e.date) === key,
+      (e) => e.scope === scope && e.type === "expense" && monthKey(e.date) === key,
     );
     const byCat = new Map<string, number>();
-    for (const e of rows)
-      byCat.set(e.categoryId, (byCat.get(e.categoryId) ?? 0) + e.amount);
+    for (const e of rows) byCat.set(e.categoryId, (byCat.get(e.categoryId) ?? 0) + e.amount);
     const total = [...byCat.values()].reduce((a, b) => a + b, 0);
     grand += total;
 
@@ -141,9 +129,7 @@ export function annualReportPdf(
       },
       margin: { left: 40, right: 40 },
     });
-    cursor =
-      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
-        .finalY + 16;
+    cursor = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16;
     if (cursor > 720 && m < 11) {
       doc.addPage();
       cursor = 50;

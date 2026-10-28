@@ -10,7 +10,7 @@ import {
 } from "react";
 import { CATEGORY_COLORS, DEFAULT_CATEGORIES } from "./db";
 import { supabaseRepository } from "./db-supabase";
-import { addMonths, monthKey } from "./money";
+import { addMonths, monthKey, todayISO } from "./money";
 import { uid, type Category, type Entry, type Scope } from "./types";
 
 export interface NewExpenseInput {
@@ -107,6 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       paid: input.paidUpfront ? input.amount : 0,
       fromReserve: false,
       paidUpfront: input.paidUpfront,
+      paidAt: input.paidUpfront ? todayISO() : null,
       createdAt: now,
     };
 
@@ -177,6 +178,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         groupId: null,
         fromReserve: false,
         paidUpfront: false,
+        paidAt: input.date,
         createdAt: new Date().toISOString(),
       },
     ]);
@@ -196,14 +198,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const payPartial = useCallback((id: string, value: number) => {
+    const paidAt = todayISO();
     setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, paid: Math.min(e.amount, e.paid + value) } : e)),
+      prev.map((e) =>
+        e.id === id ? { ...e, paid: Math.min(e.amount, e.paid + value), paidAt } : e,
+      ),
     );
   }, []);
 
   const payFull = useCallback((ids: string[]) => {
     const set_ = new Set(ids);
-    setEntries((prev) => prev.map((e) => (set_.has(e.id) ? { ...e, paid: e.amount } : e)));
+    const paidAt = todayISO();
+    setEntries((prev) => prev.map((e) => (set_.has(e.id) ? { ...e, paid: e.amount, paidAt } : e)));
   }, []);
 
   const addCategory = useCallback((name: string, icon?: string) => {
@@ -257,6 +263,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         groupId: null,
         fromReserve: true,
         paidUpfront: false,
+        paidAt: todayISO(),
         createdAt: new Date().toISOString(),
       },
     ]);

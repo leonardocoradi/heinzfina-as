@@ -40,6 +40,7 @@ interface EntryRow {
   group_id: string | null;
   from_reserve: boolean;
   paid_upfront: boolean;
+  paid_at: string | null;
   created_at: string;
 }
 
@@ -71,6 +72,7 @@ const toEntry = (r: EntryRow): Entry => ({
   groupId: r.group_id,
   fromReserve: r.from_reserve,
   paidUpfront: r.paid_upfront ?? false,
+  paidAt: r.paid_at ?? null,
   createdAt: r.created_at,
 });
 
@@ -90,6 +92,7 @@ const toEntryRow = (e: Entry): EntryRow => ({
   group_id: e.groupId,
   from_reserve: e.fromReserve,
   paid_upfront: e.paidUpfront,
+  paid_at: e.paidAt,
   created_at: e.createdAt,
 });
 

@@ -365,7 +365,11 @@ export function DonutChart({
                       {entry.description || selectedSlice?.name || "Lançamento"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(entry.date)} · {entry.scope === "empresa" ? "Empresa" : "Pessoal"}
+                      {entry.type === "expense" && entry.paidAt
+                        ? `Pago em ${formatDate(entry.paidAt)}`
+                        : formatDate(entry.date)}
+                      {" · "}
+                      {entry.scope === "empresa" ? "Empresa" : "Pessoal"}
                     </p>
                   </div>
                   <strong

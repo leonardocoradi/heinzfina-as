@@ -22,6 +22,7 @@ create table if not exists public.entries (
   group_id            text,
   from_reserve        boolean not null default false,
   paid_upfront        boolean not null default false,
+  paid_at             text,
   created_at          text not null default now()::text
 );
 

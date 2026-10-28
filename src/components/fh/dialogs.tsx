@@ -957,7 +957,9 @@ export function DetailDialog({
                               : `${entry.installmentIndex}/${entry.installmentCount}`}
                           </span>
                           <span className="min-w-0 flex-1 text-xs text-muted-foreground sm:text-sm">
-                            {formatDate(entry.date)}
+                            {entry.paidAt
+                              ? `Pago em ${formatDate(entry.paidAt)}`
+                              : `Vencimento ${formatDate(entry.date)}`}
                           </span>
                           <span className="hidden text-sm font-medium tabular-nums sm:block">
                             {formatCents(entry.amount)}
@@ -1000,7 +1002,11 @@ export function DetailDialog({
                     </p>
                   )}
                   <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="tabular-nums">{formatDate(e.date)}</span>
+                    <span className="tabular-nums">
+                      {e.paidAt
+                        ? `Pago em ${formatDate(e.paidAt)}`
+                        : `Vencimento ${formatDate(e.date)}`}
+                    </span>
                     <span className="font-display text-sm font-semibold tabular-nums text-foreground">
                       {formatCents(e.amount)}
                     </span>
@@ -1009,7 +1015,9 @@ export function DetailDialog({
                 {/* Desktop */}
                 <span className="hidden text-sm tabular-nums sm:block">{formatDate(e.date)}</span>
                 <span className="hidden truncate text-sm sm:block">{labelOf(e)}</span>
-                <span className="hidden text-sm tabular-nums sm:block">{formatDate(e.date)}</span>
+                <span className="hidden text-sm tabular-nums sm:block">
+                  {e.paidAt ? `Pago em ${formatDate(e.paidAt)}` : "—"}
+                </span>
                 <span className="hidden text-right font-display text-sm font-semibold tabular-nums sm:block">
                   {formatCents(e.amount)}
                 </span>

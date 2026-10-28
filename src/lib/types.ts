@@ -29,6 +29,8 @@ export interface Entry {
   groupId: string | null;
   fromReserve: boolean;
   paidUpfront: boolean;
+  /** ISO yyyy-mm-dd da última confirmação de pagamento */
+  paidAt: string | null;
   createdAt: string;
 }
 
@@ -36,5 +38,4 @@ export interface Meta {
   reserve: number;
 }
 
-export const uid = () =>
-  `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+export const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
